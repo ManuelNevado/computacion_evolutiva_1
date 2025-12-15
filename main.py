@@ -10,7 +10,7 @@ class Sudoku:
         self.fixed_mask = self.original_board != 0
         
     def load_board(self, filename):
-        """Reads the Sudoku board from a text file."""
+        """Lee el tablero de Sudoku desde un archivo de texto."""
         try:
             board = []
             with open(filename, 'r') as f:
@@ -29,7 +29,7 @@ class Sudoku:
             sys.exit(1)
 
     def display(self, board=None):
-        """Prints the board to console."""
+        """Imprime el tablero en la consola."""
         if board is None:
             board = self.original_board
             
@@ -43,7 +43,7 @@ class Sudoku:
             print()
 
 class EvolutionaryAlgorithm:
-    """Generic Evolutionary Algorithm class."""
+    """Clase genérica de Algoritmo Evolutivo."""
     def __init__(self, population_size=1000, mutation_rate=0.02, elite_size=20, crossover_rate=0.9, elitism_replacement='worst'):
         self.population_size = population_size
         self.mutation_rate = mutation_rate
@@ -53,28 +53,28 @@ class EvolutionaryAlgorithm:
         self.population = []
 
     def selection(self, population, fitnesses):
-        """Tournament selection (Minimization). Generic method."""
+        """Selección por torneo (Minimización). Método genérico."""
         tournament_size = 5
         selected = []
         for _ in range(len(population)):
             candidates_idx = random.sample(range(len(population)), tournament_size)
             best_idx = candidates_idx[0]
             for idx in candidates_idx[1:]:
-                if fitnesses[idx] < fitnesses[best_idx]: # Minimization
+                if fitnesses[idx] < fitnesses[best_idx]: # Minimización
                     best_idx = idx
             selected.append(population[best_idx])
         return selected
 
     def solve(self, generations=1000):
-        """Main evolutionary loop. Generic method."""
+        """Bucle evolutivo principal. Método genérico."""
         print(f"Starting evolution with population size {self.population_size}...")
         
         self.population = self.initialize_population()
         
-        # Calculate initial fitnesses
+        # Calcular fitness inicial
         fitnesses = [self.calculate_fitness(ind) for ind in self.population]
         
-        history = [] # Store (best_fitness, avg_fitness) tuples
+        history = [] # Almacenar tuplas (mejor_fitness, avg_fitness)
         
         for gen in range(generations):
             best_fitness_current = min(fitnesses)
@@ -84,7 +84,7 @@ class EvolutionaryAlgorithm:
             
             history.append((best_fitness_current, avg_fitness))
             
-            # Monitor every 10 generations
+            # Monitorear cada 10 generaciones
             if gen % 10 == 0:
                 print(f"Gen {gen}: Best Fitness = {best_fitness_current:.2f} | Avg Fitness = {avg_fitness:.2f}")
                 
@@ -92,12 +92,12 @@ class EvolutionaryAlgorithm:
                 print(f"Solution found at generation {gen}!")
                 return self.population[best_idx_current], history
             
-            # Selection for the entire new generation
+            # Selección para toda la nueva generación
             parents = self.selection(self.population, fitnesses)
             
             new_population = []
             
-            # Create new generation
+            # Crear nueva generación
             while len(new_population) < self.population_size:
                 p1 = random.choice(parents)
                 p2 = random.choice(parents)
@@ -111,21 +111,21 @@ class EvolutionaryAlgorithm:
                 if len(new_population) < self.population_size:
                     new_population.append(self.mutate(c2))
             
-            # Calculate fitness for new population
+            # Calcular fitness para la nueva población
             new_fitnesses = [self.calculate_fitness(ind) for ind in new_population]
             best_fitness_new = min(new_fitnesses)
             
-            # Conditional Elitism
-            # If current best is better than ANY in new generation, preserve it
+            # Elitismo condicional
+            # Si el mejor actual es mejor que CUALQUIERA en la nueva generación, preservarlo
             if best_fitness_current < best_fitness_new:
-                # Choose individual to replace
+                # Elegir individuo a reemplazar
                 if self.elitism_replacement == 'random':
                     replace_idx = random.randint(0, self.population_size - 1)
-                else: # 'worst'
-                    replace_idx = np.argmax(new_fitnesses) # Max fitness is worst in minimization
+                else: # 'peor'
+                    replace_idx = np.argmax(new_fitnesses) # El fitness máximo es el peor en minimización
                 
                 new_population[replace_idx] = best_individual_current
-                new_fitnesses[replace_idx] = best_fitness_current # Update fitness list too
+                new_fitnesses[replace_idx] = best_fitness_current # Actualizar también la lista de fitness
             
             self.population = new_population
             fitnesses = new_fitnesses
@@ -135,7 +135,7 @@ class EvolutionaryAlgorithm:
         return self.population[best_idx], history
 
 class SudokuGA(EvolutionaryAlgorithm):
-    """Sudoku specific implementation of Evolutionary Algorithm."""
+    """Implementación específica para Sudoku del Algoritmo Evolutivo."""
     def __init__(self, initial_board, population_size=1000, mutation_rate=0.02, elite_size=20, crossover_rate=0.9, elitism_replacement='worst', crossover_type='single_point'):
         super().__init__(population_size, mutation_rate, elite_size, crossover_rate, elitism_replacement)
         self.initial_board = initial_board
@@ -145,28 +145,28 @@ class SudokuGA(EvolutionaryAlgorithm):
 
     def precompute_domains(self):
         """
-        Precomputes the domain of valid values for each empty cell
-        based on the initial fixed numbers.
+        Precomputa el dominio de valores válidos para cada celda vacía
+        basado en los números fijos iniciales.
         """
         domains = {}
         for r in range(9):
             for c in range(9):
                 if not self.fixed_mask[r][c]:
-                    # Start with all possible values
+                    # Empezar con todos los valores posibles
                     possible = set(range(1, 10))
                     
-                    # Remove values present in the same row (fixed only)
+                    # Eliminar valores presentes en la misma fila (solo fijos)
                     possible -= set(self.initial_board[r, :])
                     
-                    # Remove values present in the same column (fixed only)
+                    # Eliminar valores presentes en la misma columna (solo fijos)
                     possible -= set(self.initial_board[:, c])
                     
-                    # Remove values present in the same subgrid (fixed only)
+                    # Eliminar valores presentes en el mismo subcuadrado (solo fijos)
                     start_r, start_c = (r // 3) * 3, (c // 3) * 3
                     subgrid = self.initial_board[start_r:start_r+3, start_c:start_c+3]
                     possible -= set(subgrid.flatten())
                     
-                    # If domain is empty (puzzle invalid or too constrained?), fallback to 1-9
+                    # Si el dominio está vacío (¿puzzle inválido o demasiado restringido?), usar 1-9 como fallback
                     if not possible:
                         possible = set(range(1, 10))
                         
@@ -174,22 +174,22 @@ class SudokuGA(EvolutionaryAlgorithm):
         return domains
 
     def initialize_population(self):
-        """Creates initial population using domain-based initialization."""
+        """Crea la población inicial usando inicialización basada en dominios."""
         population = []
         for _ in range(self.population_size):
             individual = np.copy(self.initial_board)
             for r in range(9):
                 for c in range(9):
                     if not self.fixed_mask[r][c]:
-                        # Pick a random value from the precomputed domain
+                        # Elegir un valor aleatorio del dominio precomputado
                         domain = self.domains[(r, c)]
                         individual[r][c] = random.choice(domain)
             population.append(individual)
         return population
 
     def calculate_fitness(self, individual):
-        """Calculates fitness based on the specific formula:
-        Sum( (f_i + c_i + s_i) / 2 ) for all cells.
+        """Calcula el fitness basado en la fórmula específica:
+        Suma( (f_i + c_i + s_i) / 2 ) para todas las celdas.
         """
         total_fitness = 0
         
@@ -197,13 +197,13 @@ class SudokuGA(EvolutionaryAlgorithm):
             for c in range(9):
                 val = individual[r][c]
                 
-                # f_i: Row conflicts
+                # f_i: Conflictos de fila
                 f_i = np.sum(individual[r, :] == val) - 1
                 
-                # c_i: Column conflicts
+                # c_i: Conflictos de columna
                 c_i = np.sum(individual[:, c] == val) - 1
                 
-                # s_i: Subgrid conflicts
+                # s_i: Conflictos de subcuadrado
                 start_r, start_c = (r // 3) * 3, (c // 3) * 3
                 subgrid = individual[start_r:start_r+3, start_c:start_c+3]
                 s_i = np.sum(subgrid == val) - 1
@@ -219,26 +219,26 @@ class SudokuGA(EvolutionaryAlgorithm):
             return self.crossover_single_point(parent1, parent2)
 
     def crossover_single_point(self, parent1, parent2):
-        """Single point crossover on flattened board."""
-        # Flatten
+        """Cruce de un solo punto en el tablero aplanado."""
+        # Aplanar
         flat1 = parent1.flatten()
         flat2 = parent2.flatten()
         
-        # Random crossover point
+        # Punto de cruce aleatorio
         point = random.randint(1, 80)
         
-        # Create children
+        # Crear hijos
         child1_flat = np.concatenate((flat1[:point], flat2[point:]))
         child2_flat = np.concatenate((flat2[:point], flat1[point:]))
         
-        # Reshape back to 9x9
+        # Remodelar de nuevo a 9x9
         child1 = child1_flat.reshape((9, 9))
         child2 = child2_flat.reshape((9, 9))
                 
         return child1, child2
 
     def crossover_rows(self, parent1, parent2):
-        """Uniform crossover on rows. Respects row constraints."""
+        """Cruce uniforme en filas. Respeta las restricciones de las filas."""
         child1 = np.copy(parent1)
         child2 = np.copy(parent2)
         
@@ -250,18 +250,18 @@ class SudokuGA(EvolutionaryAlgorithm):
         return child1, child2
 
     def mutate(self, individual):
-        """Performs mutation on each gene with a given probability.
-        Uses precomputed domains to ensure new values are valid w.r.t initial constraints.
+        """Realiza la mutación en cada gen con una probabilidad dada.
+        Usa dominios precomputados para asegurar que los nuevos valores sean válidos con respecto a las restricciones iniciales.
         """
         for r in range(9):
             for c in range(9):
-                # Skip fixed cells
+                # Omitir celdas fijas
                 if self.fixed_mask[r][c]:
                     continue
                 
                 if random.random() < self.mutation_rate:
                     current_val = individual[r][c]
-                    # Choose new value from domain excluding current
+                    # Elegir un nuevo valor del dominio excluyendo el actual
                     domain = self.domains[(r, c)]
                     possible_values = [v for v in domain if v != current_val]
                     
@@ -272,7 +272,7 @@ class SudokuGA(EvolutionaryAlgorithm):
 
 import matplotlib.pyplot as plt
 
-# ... (rest of imports)
+# ... (resto de importaciones)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Sudoku Solver using Genetic Algorithm')
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     
     for i in range(args.runs):
         print(f"\n--- Run {i+1}/{args.runs} ---")
-        # Using reasonable parameters for convergence with population 100
+        # Usando parámetros razonables para la convergencia con una población de 100
         ga = SudokuGA(game.original_board, population_size=100, mutation_rate=0.01, elite_size=5, crossover_rate=0.9, elitism_replacement=args.elitism_replacement, crossover_type=args.crossover)
         solution, history = ga.solve(generations=1000)
         
@@ -309,16 +309,16 @@ if __name__ == "__main__":
         game.display(solution)
         print(f"Final Fitness: {final_fitness}")
 
-    # VAMM Calculation
+    # Cálculo de VAMM
     mean_best_fitness = np.mean(best_fitnesses)
     std_best_fitness = np.std(best_fitnesses)
     print(f"\nVAMM (Mean Best Fitness over {args.runs} runs): {mean_best_fitness:.2f} +/- {std_best_fitness:.2f}")
     
-    # Plotting
-    # We will plot the history of the first run for simplicity, or we could average them.
-    # Let's plot the first run as an example, or if multiple runs, maybe the best one?
-    # User asked for "plotear el valor de fitnes mejor y el valor de fitness promedio de la ejecucion".
-    # Implies a single execution or a representative one. Let's plot the run with the best final fitness.
+    # Graficando
+    # Graficaremos el historial de la primera ejecución por simplicidad, o podríamos promediarlos.
+    # Grafiquemos la primera ejecución como ejemplo, o si hay múltiples ejecuciones, ¿quizás la mejor?
+    # El usuario pidió "plotear el valor de fitness mejor y el valor de fitness promedio de la ejecucion".
+    # Implica una única ejecución o una representativa. Grafiquemos la ejecución con el mejor fitness final.
     
     best_run_idx = np.argmin(best_fitnesses)
     best_history = all_histories[best_run_idx]
